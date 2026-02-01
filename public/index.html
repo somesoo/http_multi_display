@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choose Language</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 50px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 36px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 18px;
+        }
+        
+        .selection-info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        
+        .languages-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .language-card {
+            background: #f8f9fa;
+            padding: 30px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 3px solid transparent;
+            position: relative;
+        }
+        
+        .language-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        .language-card.selected {
+            background: #667eea;
+            color: white;
+            border-color: #764ba2;
+        }
+        
+        .language-card.selected .checkmark {
+            display: block;
+        }
+        
+        .language-flag {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        .language-name {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .language-code {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+        
+        .checkmark {
+            display: none;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 25px;
+            height: 25px;
+            background: white;
+            color: #667eea;
+            border-radius: 50%;
+            font-size: 16px;
+            line-height: 25px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 15px 40px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌍 Choose Your Language</h1>
+        <p class="subtitle">Select one or two languages for the presentation</p>
+        
+        <div class="selection-info">
+            <span id="selectionText">Please select at least one language</span>
+        </div>
+        
+        <div class="languages-grid" id="languagesGrid">
+            <!-- Languages will be loaded here -->
+        </div>
+        
+        <div class="action-buttons">
+            <button class="btn-secondary" id="clearBtn">Clear Selection</button>
+            <button class="btn-primary" id="continueBtn" disabled>Continue to Presentation →</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        
+        const languageFlags = {
+            en: '🇬🇧',
+            pl: '🇵🇱',
+            de: '🇩🇪',
+            es: '🇪🇸',
+            fr: '🇫🇷',
+            it: '🇮🇹',
+            ru: '🇷🇺',
+            uk: '🇺🇦',
+            cs: '🇨🇿',
+            sk: '🇸🇰'
+        };
+        
+        const languageNames = {
+            en: 'English',
+            pl: 'Polski',
+            de: 'Deutsch',
+            es: 'Español',
+            fr: 'Français',
+            it: 'Italiano',
+            ru: 'Русский',
+            uk: 'Українська',
+            cs: 'Čeština',
+            sk: 'Slovenčina'
+        };
+        
+        let availableLanguages = [];
+        let selectedLanguages = [];
+        
+        socket.on('init', (data) => {
+            availableLanguages = data.languages || [];
+            renderLanguages();
+        });
+        
+        function renderLanguages() {
+            const grid = document.getElementById('languagesGrid');
+            grid.innerHTML = '';
+            
+            availableLanguages.forEach(lang => {
+                const card = document.createElement('div');
+                card.className = 'language-card';
+                card.dataset.lang = lang;
+                
+                card.innerHTML = `
+                    <div class="checkmark">✓</div>
+                    <div class="language-flag">${languageFlags[lang] || '🌐'}</div>
+                    <div class="language-name">${languageNames[lang] || lang.toUpperCase()}</div>
+                    <div class="language-code">${lang.toUpperCase()}</div>
+                `;
+                
+                card.addEventListener('click', () => toggleLanguage(lang));
+                grid.appendChild(card);
+            });
+        }
+        
+        function toggleLanguage(lang) {
+            const index = selectedLanguages.indexOf(lang);
+            
+            if (index > -1) {
+                // Deselect
+                selectedLanguages.splice(index, 1);
+            } else {
+                // Select (max 2)
+                if (selectedLanguages.length < 2) {
+                    selectedLanguages.push(lang);
+                } else {
+                    // Replace oldest selection
+                    selectedLanguages.shift();
+                    selectedLanguages.push(lang);
+                }
+            }
+            
+            updateUI();
+        }
+        
+        function updateUI() {
+            // Update card styles
+            document.querySelectorAll('.language-card').forEach(card => {
+                const lang = card.dataset.lang;
+                card.classList.toggle('selected', selectedLanguages.includes(lang));
+            });
+            
+            // Update selection text
+            const selectionText = document.getElementById('selectionText');
+            if (selectedLanguages.length === 0) {
+                selectionText.textContent = 'Please select at least one language';
+            } else if (selectedLanguages.length === 1) {
+                selectionText.textContent = `Selected: ${languageNames[selectedLanguages[0]]}`;
+            } else {
+                selectionText.textContent = `Selected: ${languageNames[selectedLanguages[0]]} + ${languageNames[selectedLanguages[1]]}`;
+            }
+            
+            // Enable/disable continue button
+            document.getElementById('continueBtn').disabled = selectedLanguages.length === 0;
+        }
+        
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            selectedLanguages = [];
+            updateUI();
+        });
+        
+        document.getElementById('continueBtn').addEventListener('click', () => {
+            if (selectedLanguages.length > 0) {
+                const params = selectedLanguages.join(',');
+                window.location.href = `/client.html?langs=${params}`;
+            }
+        });
+    </script>
+</body>
+</html>

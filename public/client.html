@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentation View</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .timer-bar {
+            background: #16213e;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .timer-display {
+            font-size: 42px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            color: #667eea;
+        }
+        
+        .timer-display.warning {
+            color: #ffa500;
+        }
+        
+        .timer-display.critical {
+            color: #ff4444;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .content-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+        
+        .slide-container {
+            max-width: 1400px;
+            width: 100%;
+        }
+        
+        .single-lang .slide-content {
+            text-align: center;
+        }
+        
+        .dual-lang {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+        
+        .lang-section {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 40px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(102, 126, 234, 0.3);
+        }
+        
+        .lang-label {
+            display: inline-block;
+            background: #667eea;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+        }
+        
+        .slide-title {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            line-height: 1.2;
+            color: #fff;
+        }
+        
+        .slide-content {
+            font-size: 24px;
+            line-height: 1.6;
+            color: #ddd;
+        }
+        
+        .single-lang .slide-title {
+            font-size: 64px;
+        }
+        
+        .single-lang .slide-content {
+            font-size: 32px;
+        }
+        
+        .slide-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 16px;
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .connection-status.connected {
+            background: #28a745;
+        }
+        
+        .connection-status.disconnected {
+            background: #dc3545;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dual-lang {
+                grid-template-columns: 1fr;
+            }
+            
+            .slide-title {
+                font-size: 32px;
+            }
+            
+            .slide-content {
+                font-size: 18px;
+            }
+            
+            .timer-display {
+                font-size: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status disconnected" id="connectionStatus">Connecting...</div>
+    
+    <div class="timer-bar">
+        <div class="timer-display" id="timerDisplay">--:--</div>
+    </div>
+    
+    <div class="content-area">
+        <div class="slide-container" id="slideContainer">
+            <div class="single-lang">
+                <div class="slide-content">
+                    <h1 class="slide-title">Loading...</h1>
+                    <p class="slide-content">Please wait</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="slide-indicator" id="slideIndicator">Slide 1 / 1</div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        
+        // Get selected languages from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const selectedLangs = urlParams.get('langs')?.split(',') || ['en'];
+        
+        let slides = [];
+        let currentSlideIndex = 0;
+        let timerState = null;
+        
+        const languageNames = {
+            en: 'English',
+            pl: 'Polski',
+            de: 'Deutsch',
+            es: 'Español',
+            fr: 'Français',
+            it: 'Italiano',
+            ru: 'Русский',
+            uk: 'Українська',
+            cs: 'Čeština',
+            sk: 'Slovenčina'
+        };
+        
+        // Socket events
+        socket.on('connect', () => {
+            document.getElementById('connectionStatus').textContent = 'Connected';
+            document.getElementById('connectionStatus').className = 'connection-status connected';
+        });
+        
+        socket.on('disconnect', () => {
+            document.getElementById('connectionStatus').textContent = 'Disconnected';
+            document.getElementById('connectionStatus').className = 'connection-status disconnected';
+        });
+        
+        socket.on('init', (data) => {
+            slides = data.slides;
+            currentSlideIndex = data.currentSlide;
+            timerState = data.timer;
+            
+            renderSlide();
+            updateTimer();
+        });
+        
+        socket.on('slideChanged', (index) => {
+            currentSlideIndex = index;
+            renderSlide();
+        });
+        
+        socket.on('timerUpdate', (state) => {
+            timerState = state;
+            updateTimer();
+        });
+        
+        // Render current slide
+        function renderSlide() {
+            const slide = slides[currentSlideIndex];
+            if (!slide) return;
+            
+            const container = document.getElementById('slideContainer');
+            
+            if (selectedLangs.length === 1) {
+                // Single language view
+                const lang = selectedLangs[0];
+                container.className = 'slide-container single-lang';
+                container.innerHTML = `
+                    <div class="slide-content">
+                        <h1 class="slide-title">${slide.title[lang] || 'No translation'}</h1>
+                        <p class="slide-content">${slide.content[lang] || ''}</p>
+                    </div>
+                `;
+            } else {
+                // Dual language view
+                container.className = 'slide-container dual-lang';
+                container.innerHTML = selectedLangs.map(lang => `
+                    <div class="lang-section">
+                        <div class="lang-label">${languageNames[lang] || lang}</div>
+                        <h1 class="slide-title">${slide.title[lang] || 'No translation'}</h1>
+                        <p class="slide-content">${slide.content[lang] || ''}</p>
+                    </div>
+                `).join('');
+            }
+            
+            // Update indicator
+            document.getElementById('slideIndicator').textContent = 
+                `Slide ${currentSlideIndex + 1} / ${slides.length}`;
+        }
+        
+        // Update timer display
+        function updateTimer() {
+            if (!timerState) return;
+            
+            const minutes = Math.floor(timerState.timeLeft / 60);
+            const seconds = timerState.timeLeft % 60;
+            const display = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            const timerEl = document.getElementById('timerDisplay');
+            timerEl.textContent = display;
+            
+            // Warning colors
+            timerEl.className = 'timer-display';
+            if (timerState.timeLeft <= 60 && timerState.timeLeft > 30) {
+                timerEl.classList.add('warning');
+            } else if (timerState.timeLeft <= 30 && timerState.timeLeft > 0) {
+                timerEl.classList.add('critical');
+            }
+        }
+    </script>
+</body>
+</html>

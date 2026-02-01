@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Host Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .control-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .control-section h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+        
+        .slide-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .current-slide {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+        
+        .current-slide h3 {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .slide-indicator {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .timer-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        input[type="number"] {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .timer-display {
+            text-align: center;
+            padding: 20px;
+            background: #333;
+            color: white;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .timer-time {
+            font-size: 48px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .timer-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .timer-buttons button {
+            flex: 1;
+        }
+        
+        .preview {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .preview h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+        
+        .slides-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .slide-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .slide-item:hover {
+            border-color: #667eea;
+        }
+        
+        .slide-item.active {
+            border-color: #667eea;
+            background: #e7f3ff;
+        }
+        
+        .slide-item h4 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .slide-item p {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Host Control Panel</h1>
+        
+        <div class="controls">
+            <div class="control-section">
+                <h2>📊 Slide Controls</h2>
+                <div class="slide-controls">
+                    <button class="btn-secondary" id="prevBtn">← Previous</button>
+                    <button class="btn-primary" id="nextBtn">Next →</button>
+                </div>
+                <div class="current-slide">
+                    <div class="slide-indicator">Slide <span id="currentSlideNum">1</span> of <span id="totalSlides">0</span></div>
+                    <h3 id="currentTitle">-</h3>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h2>⏱️ Timer Controls</h2>
+                <div class="timer-display">
+                    <div class="timer-time" id="timerDisplay">00:00</div>
+                </div>
+                <div class="timer-input">
+                    <input type="number" id="timerMinutes" placeholder="Minutes" min="0" max="99" value="5">
+                    <input type="number" id="timerSeconds" placeholder="Seconds" min="0" max="59" value="0">
+                </div>
+                <div class="timer-buttons">
+                    <button class="btn-success" id="startTimerBtn">Start</button>
+                    <button class="btn-danger" id="stopTimerBtn">Stop</button>
+                    <button class="btn-secondary" id="resetTimerBtn">Reset</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="preview">
+            <h2>📑 All Slides</h2>
+            <div class="slides-list" id="slidesList"></div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        
+        let slides = [];
+        let currentSlide = 0;
+        let timerState = null;
+        
+        // Initialize
+        socket.on('init', (data) => {
+            slides = data.slides;
+            currentSlide = data.currentSlide;
+            timerState = data.timer;
+            
+            updateUI();
+            renderSlidesList();
+        });
+        
+        socket.on('slideChanged', (index) => {
+            currentSlide = index;
+            updateUI();
+        });
+        
+        socket.on('timerUpdate', (state) => {
+            timerState = state;
+            updateTimerDisplay();
+        });
+        
+        // Slide controls
+        document.getElementById('prevBtn').addEventListener('click', () => {
+            socket.emit('host:prevSlide');
+        });
+        
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            socket.emit('host:nextSlide');
+        });
+        
+        // Timer controls
+        document.getElementById('startTimerBtn').addEventListener('click', () => {
+            const minutes = parseInt(document.getElementById('timerMinutes').value) || 0;
+            const seconds = parseInt(document.getElementById('timerSeconds').value) || 0;
+            const totalSeconds = minutes * 60 + seconds;
+            
+            if (totalSeconds > 0) {
+                socket.emit('host:startTimer', totalSeconds);
+            }
+        });
+        
+        document.getElementById('stopTimerBtn').addEventListener('click', () => {
+            socket.emit('host:stopTimer');
+        });
+        
+        document.getElementById('resetTimerBtn').addEventListener('click', () => {
+            socket.emit('host:resetTimer');
+        });
+        
+        // UI Updates
+        function updateUI() {
+            const slide = slides[currentSlide];
+            if (slide) {
+                document.getElementById('currentSlideNum').textContent = currentSlide + 1;
+                document.getElementById('totalSlides').textContent = slides.length;
+                
+                // Show first available language title
+                const firstLang = Object.keys(slide.title)[0];
+                document.getElementById('currentTitle').textContent = slide.title[firstLang] || '-';
+            }
+            
+            // Update active slide in list
+            document.querySelectorAll('.slide-item').forEach((el, idx) => {
+                el.classList.toggle('active', idx === currentSlide);
+            });
+        }
+        
+        function updateTimerDisplay() {
+            if (timerState) {
+                const minutes = Math.floor(timerState.timeLeft / 60);
+                const seconds = timerState.timeLeft % 60;
+                document.getElementById('timerDisplay').textContent = 
+                    `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+        }
+        
+        function renderSlidesList() {
+            const container = document.getElementById('slidesList');
+            container.innerHTML = '';
+            
+            slides.forEach((slide, index) => {
+                const firstLang = Object.keys(slide.title)[0];
+                const div = document.createElement('div');
+                div.className = 'slide-item';
+                if (index === currentSlide) div.classList.add('active');
+                
+                div.innerHTML = `
+                    <h4>Slide ${index + 1}: ${slide.title[firstLang] || 'Untitled'}</h4>
+                    <p>${slide.content[firstLang]?.substring(0, 100) || ''}...</p>
+                `;
+                
+                div.addEventListener('click', () => {
+                    socket.emit('host:changeSlide', index);
+                });
+                
+                container.appendChild(div);
+            });
+        }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                socket.emit('host:prevSlide');
+            } else if (e.key === 'ArrowRight') {
+                socket.emit('host:nextSlide');
+            }
+        });
+    </script>
+</body>
+</html>
