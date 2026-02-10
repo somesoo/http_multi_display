@@ -44,11 +44,32 @@ socket.on('init', (data) => {
     
     renderSlide();
     updateTimer();
+    
+    // Hide timer bar if slide has no duration
+    const timerBar = document.querySelector('.timer-bar');
+    if (timerBar) {
+        if (slides[currentSlideIndex] && slides[currentSlideIndex].duration === 0) {
+            timerBar.classList.add('hidden');
+        } else {
+            timerBar.classList.remove('hidden');
+        }
+    }
 });
 
 socket.on('slideChanged', (index) => {
     currentSlideIndex = index;
     renderSlide();
+    updateTimer();
+    
+    // Hide timer bar if slide has no duration
+    const timerBar = document.querySelector('.timer-bar');
+    if (timerBar) {
+        if (slides[currentSlideIndex] && slides[currentSlideIndex].duration === 0) {
+            timerBar.classList.add('hidden');
+        } else {
+            timerBar.classList.remove('hidden');
+        }
+    }
 });
 
 socket.on('timerUpdate', (state) => {
@@ -76,13 +97,14 @@ function renderSlide() {
     } else {
         // Dual language view - both in one container to measure
         container.className = 'slide-container dual-lang';
-        container.innerHTML = selectedLangs.map(lang => `
+        const langSections = selectedLangs.map(lang => `
             <div class="lang-section">
                 <div class="lang-label">${languageNames[lang] || lang}</div>
                 <h1 class="slide-title">${slide.title[lang] || 'No translation'}</h1>
                 <p class="slide-content">${slide.content[lang] || ''}</p>
             </div>
         `).join('');
+        container.innerHTML = langSections;
     }
     
     // Update indicator
@@ -159,18 +181,14 @@ function applyFontSize(container, fontSize) {
 function updateTimer() {
     if (!timerState) return;
     
-    const minutes = Math.floor(timerState.timeLeft / 60);
-    const seconds = timerState.timeLeft % 60;
-    const display = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    
     const timerEl = document.getElementById('timerDisplay');
-    timerEl.textContent = display;
+    timerEl.textContent = timerState.timeLeft;
     
-    // Warning colors
+    // Warning colors - always update based on current time
     timerEl.className = 'timer-display';
-    if (timerState.timeLeft <= 60 && timerState.timeLeft > 30) {
+    if (timerState.timeLeft <= 10 && timerState.timeLeft > 5) {
         timerEl.classList.add('warning');
-    } else if (timerState.timeLeft <= 30 && timerState.timeLeft > 0) {
+    } else if (timerState.timeLeft <= 5 && timerState.timeLeft > 0) {
         timerEl.classList.add('critical');
     }
 }

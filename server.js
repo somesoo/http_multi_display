@@ -10,6 +10,7 @@ const server = http.createServer(app);
 const io = socketIO(server);
 
 const PORT = process.env.PORT || 3000;
+const STATE_FILE = path.join(__dirname, 'state.json');
 
 // Serve static files
 app.use(express.static('public'));
@@ -46,7 +47,8 @@ function loadTranslations() {
         slideMap[slideId] = {
           id: slideId,
           title: {},
-          content: {}
+          content: {},
+          duration: parseInt(row.duration) || 0  // Duration in seconds
         };
       }
       
@@ -77,7 +79,8 @@ function createDefaultSlides() {
         en: 'Welcome to our presentation',
         pl: 'Witamy na naszej prezentacji',
         de: 'Willkommen zu unserer Präsentation'
-      }
+      },
+      duration: 30
     },
     {
       id: '2',
@@ -90,13 +93,41 @@ function createDefaultSlides() {
         en: 'This is slide number two',
         pl: 'To jest slajd numer dwa',
         de: 'Dies ist Folie Nummer zwei'
-      }
+      },
+      duration: 45
     }
   ];
 }
 
+// Load state from file
+function loadState() {
+  try {
+    if (fs.existsSync(STATE_FILE)) {
+      const data = JSON.parse(fs.readFileSync(STATE_FILE, 'utf-8'));
+      currentSlideIndex = Math.min(data.currentSlide || 0, slides.length - 1);
+      console.log('State loaded: current slide =', currentSlideIndex);
+    }
+  } catch (error) {
+    console.error('Error loading state:', error);
+    currentSlideIndex = 0;
+  }
+}
+
+// Save state to file
+function saveState() {
+  try {
+    fs.writeFileSync(STATE_FILE, JSON.stringify({
+      currentSlide: currentSlideIndex,
+      timestamp: new Date().toISOString()
+    }), 'utf-8');
+  } catch (error) {
+    console.error('Error saving state:', error);
+  }
+}
+
 // Initialize slides
 slides = loadTranslations();
+loadState();
 
 // Get available languages
 function getAvailableLanguages() {
@@ -122,22 +153,58 @@ io.on('connection', (socket) => {
   // Host controls
   socket.on('host:changeSlide', (index) => {
     if (index >= 0 && index < slides.length) {
-      currentSlideIndex = index;
-      io.emit('slideChanged', currentSlideIndex);
+      // Only reset timer if changing to a different slide
+      if (index !== currentSlideIndex) {
+        currentSlideIndex = index;
+        saveState();
+        
+        // Reset timer to slide duration
+        const currentSlide = slides[currentSlideIndex];
+        timerState = {
+          running: false,
+          timeLeft: currentSlide.duration || 0,
+          totalTime: currentSlide.duration || 0
+        };
+        
+        io.emit('slideChanged', currentSlideIndex);
+        io.emit('timerUpdate', timerState);
+      }
     }
   });
   
   socket.on('host:nextSlide', () => {
     if (currentSlideIndex < slides.length - 1) {
       currentSlideIndex++;
+      saveState();
+      
+      // Reset timer to slide duration
+      const currentSlide = slides[currentSlideIndex];
+      timerState = {
+        running: false,
+        timeLeft: currentSlide.duration || 0,
+        totalTime: currentSlide.duration || 0
+      };
+      
       io.emit('slideChanged', currentSlideIndex);
+      io.emit('timerUpdate', timerState);
     }
   });
   
   socket.on('host:prevSlide', () => {
     if (currentSlideIndex > 0) {
       currentSlideIndex--;
+      saveState();
+      
+      // Reset timer to slide duration
+      const currentSlide = slides[currentSlideIndex];
+      timerState = {
+        running: false,
+        timeLeft: currentSlide.duration || 0,
+        totalTime: currentSlide.duration || 0
+      };
+      
       io.emit('slideChanged', currentSlideIndex);
+      io.emit('timerUpdate', timerState);
     }
   });
   

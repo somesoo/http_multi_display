@@ -1,16 +1,16 @@
-slideId,language,title,content
-1,en,Welcome,Welcome to our multilingual presentation system.Witamy w naszym systemie prezentacji wielojęzycznych.Witamy w naszym systemie prezentacji wielojęzycznych.Witamy w naszym systemie prezentacji wielojęzycznych. This is the first slide.
-1,pl,Witamy,Witamy w naszym systemie prezentacji wielojęzycznych.Witamy w naszym systemie prezentacji wielojęzycznych.Witamy w naszym systemie prezentacji wielojęzycznych.Witamy w naszym systemie prezentacji wielojęzycznych. To jest pierwszy slajd.
-1,de,Willkommen,Willkommen bei unserem mehrsprachigen Präsentationssystem. Dies ist die erste Folie.
-2,en,Introduction,This presentation demonstrates real-time synchronization across multiple languages.
-2,pl,Wprowadzenie,Ta prezentacja demonstruje synchronizację w czasie rzeczywistym w wielu językach.
-2,de,Einführung,Diese Präsentation demonstriert die Echtzeitsynchronisation über mehrere Sprachen hinweg.
-3,en,Features,Real-time updates • Multi-language support • Timer countdown • Host control
-3,pl,Funkcje,Aktualizacje w czasie rzeczywistym • Wsparcie wielu języków • Odliczanie czasu • Kontrola hosta
-3,de,Funktionen,Echtzeit-Updates • Mehrsprachige Unterstützung • Timer-Countdown • Host-Kontrolle
-4,en,How It Works,The host controls the presentation while clients see synchronized content in their chosen language.
-4,pl,Jak to działa,Host kontroluje prezentację podczas gdy klienci widzą zsynchronizowaną treść w wybranym języku.
-4,de,Wie es funktioniert,Der Host steuert die Präsentation während Clients synchronisierten Inhalt in ihrer gewählten Sprache sehen.
-5,en,Thank You,Thank you for your attention! Questions?
-5,pl,Dziękujemy,Dziękujemy za uwagę! Pytania?
-5,de,Vielen Dank,Vielen Dank für Ihre Aufmerksamkeit! Fragen?
+slideId,language,title,content,duration
+1,en,Welcome,Welcome to our multilingual presentation system.Witamy w naszym systemie prezentacji wielojęzycznych.Witamy w naszym systemie prezentacji wielojęzycznych.Witamy w naszym systemie prezentacji wielojęzycznych. This is the first slide.,30
+1,pl,Witamy,Witamy w naszym systemie prezentacji wielojęzycznych.Witamy w naszym systemie prezentacji wielojęzycznych.Witamy w naszym systemie prezentacji wielojęzycznych.Witamy w naszym systemie prezentacji wielojęzycznych. To jest pierwszy slajd.,30
+1,de,Willkommen,Willkommen bei unserem mehrsprachigen Präsentationssystem. Dies ist die erste Folie.,30
+2,en,Introduction,This presentation demonstrates real-time synchronization across multiple languages.,0
+2,pl,Wprowadzenie,Ta prezentacja demonstruje synchronizację w czasie rzeczywistym w wielu językach.,0
+2,de,Einführung,Diese Präsentation demonstriert die Echtzeitsynchronisation über mehrere Sprachen hinweg.,0
+3,en,Features,Real-time updates • Multi-language support • Timer countdown • Host control,60
+3,pl,Funkcje,Aktualizacje w czasie rzeczywistym • Wsparcie wielu języków • Odliczanie czasu • Kontrola hosta,60
+3,de,Funktionen,Echtzeit-Updates • Mehrsprachige Unterstützung • Timer-Countdown • Host-Kontrolle,60
+4,en,How It Works,The host controls the presentation while clients see synchronized content in their chosen language.,40
+4,pl,Jak to działa,Host kontroluje prezentację podczas gdy klienci widzą zsynchronizowaną treść w wybranym języku.,40
+4,de,Wie es funktioniert,Der Host steuert die Präsentation während Clients synchronisierten Inhalt in ihrer gewählten Sprache sehen.,40
+5,en,Thank You,Thank you for your attention! Questions?,30
+5,pl,Dziękujemy,Dziękujemy za uwagę! Pytania?,30
+5,de,Vielen Dank,Vielen Dank für Ihre Aufmerksamkeit! Fragen?,30

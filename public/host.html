@@ -211,6 +211,7 @@
                 <div class="current-slide">
                     <div class="slide-indicator">Slide <span id="currentSlideNum">1</span> of <span id="totalSlides">0</span></div>
                     <h3 id="currentTitle">-</h3>
+                    <div id="slideDuration" style="font-size: 12px; color: #666; margin-top: 8px;"></div>
                 </div>
             </div>
             
@@ -220,8 +221,7 @@
                     <div class="timer-time" id="timerDisplay">00:00</div>
                 </div>
                 <div class="timer-input">
-                    <input type="number" id="timerMinutes" placeholder="Minutes" min="0" max="99" value="5">
-                    <input type="number" id="timerSeconds" placeholder="Seconds" min="0" max="59" value="0">
+                    <input type="number" id="timerSeconds" placeholder="Seconds" min="0" max="999" value="5">
                 </div>
                 <div class="timer-buttons">
                     <button class="btn-success" id="startTimerBtn">Start</button>
@@ -244,11 +244,29 @@
         let slides = [];
         let currentSlide = 0;
         let timerState = null;
+        let slideJustChanged = false;  // Track if slide was just changed
+        
+        // Load state from localStorage
+        function loadSavedState() {
+            const saved = localStorage.getItem('hostSlideIndex');
+            if (saved !== null) {
+                const savedIndex = parseInt(saved);
+                return savedIndex;
+            }
+            return 0;
+        }
+        
+        // Save state to localStorage
+        function saveSavedState(index) {
+            localStorage.setItem('hostSlideIndex', index.toString());
+        }
         
         // Initialize
         socket.on('init', (data) => {
             slides = data.slides;
-            currentSlide = data.currentSlide;
+            // Restore saved state
+            const savedIndex = loadSavedState();
+            currentSlide = Math.min(savedIndex, slides.length - 1);
             timerState = data.timer;
             
             updateUI();
@@ -257,6 +275,8 @@
         
         socket.on('slideChanged', (index) => {
             currentSlide = index;
+            saveSavedState(index);
+            slideJustChanged = true;  // Mark that slide changed
             updateUI();
         });
         
@@ -268,20 +288,43 @@
         // Slide controls
         document.getElementById('prevBtn').addEventListener('click', () => {
             socket.emit('host:prevSlide');
+            slideJustChanged = true;
         });
         
         document.getElementById('nextBtn').addEventListener('click', () => {
-            socket.emit('host:nextSlide');
+            // If slide has no duration (0), just go to next slide
+            const currentSlideData = slides[currentSlide];
+            if (currentSlideData && currentSlideData.duration === 0) {
+                socket.emit('host:nextSlide');
+                slideJustChanged = true;
+                return;
+            }
+            
+            // If slide was just changed and timer is not running, start it
+            if (slideJustChanged && (!timerState || !timerState.running)) {
+                const seconds = parseInt(document.getElementById('timerSeconds').value) || 0;
+                if (seconds > 0) {
+                    socket.emit('host:startTimer', seconds);
+                    slideJustChanged = false;
+                }
+            } else {
+                // Otherwise go to next slide
+                socket.emit('host:nextSlide');
+                slideJustChanged = true;
+            }
+        });
+        
+        // Update timer display when input changes
+        document.getElementById('timerSeconds').addEventListener('input', (e) => {
+            document.getElementById('timerDisplay').textContent = e.target.value;
         });
         
         // Timer controls
         document.getElementById('startTimerBtn').addEventListener('click', () => {
-            const minutes = parseInt(document.getElementById('timerMinutes').value) || 0;
             const seconds = parseInt(document.getElementById('timerSeconds').value) || 0;
-            const totalSeconds = minutes * 60 + seconds;
             
-            if (totalSeconds > 0) {
-                socket.emit('host:startTimer', totalSeconds);
+            if (seconds > 0) {
+                socket.emit('host:startTimer', seconds);
             }
         });
         
@@ -303,6 +346,19 @@
                 // Show first available language title
                 const firstLang = Object.keys(slide.title)[0];
                 document.getElementById('currentTitle').textContent = slide.title[firstLang] || '-';
+                
+                // Show duration if available
+                const durationEl = document.getElementById('slideDuration');
+                if (slide.duration && slide.duration > 0) {
+                    durationEl.textContent = `⏱️ Duration: ${slide.duration}s`;
+                    
+                    // Auto-fill timer input with slide duration
+                    document.getElementById('timerSeconds').value = slide.duration;
+                    // Update timer display
+                    document.getElementById('timerDisplay').textContent = slide.duration;
+                } else {
+                    durationEl.textContent = '';
+                }
             }
             
             // Update active slide in list
@@ -313,10 +369,7 @@
         
         function updateTimerDisplay() {
             if (timerState) {
-                const minutes = Math.floor(timerState.timeLeft / 60);
-                const seconds = timerState.timeLeft % 60;
-                document.getElementById('timerDisplay').textContent = 
-                    `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                document.getElementById('timerDisplay').textContent = timerState.timeLeft + 's';
             }
         }
         

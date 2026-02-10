@@ -22,6 +22,10 @@ body {
     flex-shrink: 0;
 }
 
+.timer-bar.hidden {
+    display: none;
+}
+
 .timer-display {
     font-size: 36px;
     font-weight: bold;
@@ -127,6 +131,16 @@ body {
     word-wrap: break-word;
 }
 
+.slide-duration {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(102, 126, 234, 0.3);
+    font-size: 18px;
+    color: #667eea;
+    font-weight: 600;
+    text-align: center;
+}
+
 .slide-indicator {
     position: fixed;
     bottom: 20px;
@@ -153,6 +167,20 @@ body {
 
 .connection-status.disconnected {
     background: #dc3545;
+}
+
+.logo {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.logo img {
+    height: 60px;
+    width: auto;
+    opacity: 0.95;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
 }
 
 /* Hidden measurement container */
