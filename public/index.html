@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Choose Language</title>
+    <title>PBE</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,14 @@
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: #0f1224;
+            background-image:
+                url('/pbe_bck.jpg'),
+                radial-gradient(1200px 800px at 20% 10%, rgba(102, 126, 234, 0.18), transparent 60%),
+                radial-gradient(900px 700px at 80% 20%, rgba(118, 75, 162, 0.18), transparent 60%);
+            background-size: cover, auto, auto;
+            background-position: center, center, center;
+            background-repeat: no-repeat;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -187,14 +194,14 @@
 </head>
 <body>
     <div class="container">
-        <h1>🌍 Choose Your Language</h1>
-        <p class="subtitle">Select one or two languages for the presentation</p>
+        <h1>🌍 Wybierz język</h1>
+        <p class="subtitle">Wybierz jeden lub dwa języki do prezentacji</p>
         
         <div class="selection-info">
-            <span id="selectionText">Please select at least one language</span>
+            <span id="selectionText">Proszę wybrać przynajmniej jeden język</span>
         </div>
 
-        <h2 style="margin: 10px 0 15px; color: #333;">📦 Choose Set</h2>
+        <h2 style="margin: 10px 0 15px; color: #333;">Chorągiew / Etap  </h2>
         <div class="sets-grid" id="setsGrid">
             <!-- Sets will be loaded here -->
         </div>
@@ -204,8 +211,8 @@
         </div>
         
         <div class="action-buttons">
-            <button class="btn-secondary" id="clearBtn">Clear Selection</button>
-            <button class="btn-primary" id="continueBtn" disabled>Continue to Presentation →</button>
+            <button class="btn-secondary" id="clearBtn">Wyczyść wybór</button>
+            <button class="btn-primary" id="continueBtn" disabled>Idź do prezentacji</button>
         </div>
     </div>
 
@@ -283,7 +290,7 @@
                 if (setItem.id === selectedSetId) {
                     card.classList.add('selected');
                 }
-                card.textContent = `Zestaw ${setItem.id}`;
+                card.textContent = setItem.name || `Zestaw ${setItem.id}`;
                 card.addEventListener('click', () => selectSet(setItem.id));
                 grid.appendChild(card);
             });
@@ -329,11 +336,11 @@
             // Update selection text
             const selectionText = document.getElementById('selectionText');
             if (selectedLanguages.length === 0) {
-                selectionText.textContent = 'Please select at least one language';
+                selectionText.textContent = 'Wybierz conajmniej jeden język';
             } else if (selectedLanguages.length === 1) {
-                selectionText.textContent = `Selected: ${languageNames[selectedLanguages[0]]}`;
+                selectionText.textContent = `Wybrano: ${languageNames[selectedLanguages[0]]}`;
             } else {
-                selectionText.textContent = `Selected: ${languageNames[selectedLanguages[0]]} + ${languageNames[selectedLanguages[1]]}`;
+                selectionText.textContent = `Wybrano: ${languageNames[selectedLanguages[0]]} + ${languageNames[selectedLanguages[1]]}`;
             }
             
             // Enable/disable continue button
@@ -348,7 +355,8 @@
         document.getElementById('continueBtn').addEventListener('click', () => {
             if (selectedLanguages.length > 0) {
                 const params = selectedLanguages.join(',');
-                window.location.href = `/client.html?langs=${params}`;
+                const setParam = selectedSetId ? `&set=${selectedSetId}` : '';
+                window.location.href = `/client.html?langs=${params}${setParam}`;
             }
         });
 

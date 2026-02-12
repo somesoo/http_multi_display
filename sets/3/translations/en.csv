@@ -1,5 +1,5 @@
 slideId,title,content
-1,Welcome,Welcome to our multilingual presentation system.
+1,Welcome,Welcome to our multilingual presentation system.Witamy w naszym systemie prezentacji wielojęzycznych.Witamy w naszym systemie prezentacji wielojęzycznych.Witamy w naszym systemie prezentacji wielojęzycznych. This is the first slide.
 2,Introduction,This presentation demonstrates real-time synchronization across multiple languages.
 3,Features,Real-time updates • Multi-language support • Timer countdown • Host control
 4,How It Works,The host controls the presentation while clients see synchronized content in their chosen language.

@@ -3,6 +3,7 @@ const socket = io();
 // Get selected languages from URL
 const urlParams = new URLSearchParams(window.location.search);
 const selectedLangs = urlParams.get('langs')?.split(',') || ['en'];
+const selectedSet = urlParams.get('set') || '1';
 
 let slides = [];
 let currentSlideIndex = 0;
@@ -30,6 +31,7 @@ const MIN_FONT_SIZE_CONTENT = 36;
 socket.on('connect', () => {
     document.getElementById('connectionStatus').textContent = 'Connected';
     document.getElementById('connectionStatus').className = 'connection-status connected';
+    socket.emit('joinSet', selectedSet);
 });
 
 socket.on('disconnect', () => {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Host Panel</title>
+    <title>PBE</title>
     <style>
         * {
             margin: 0;
@@ -207,6 +207,10 @@
             border: 2px solid transparent;
             cursor: pointer;
             transition: all 0.3s;
+            display: grid;
+            grid-template-columns: 1fr 70px;
+            gap: 12px;
+            align-items: center;
         }
         
         .slide-item:hover {
@@ -227,32 +231,103 @@
             color: #666;
             font-size: 14px;
         }
+
+        .login-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 18, 36, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .login-card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+
+        .login-card h2 {
+            margin-bottom: 16px;
+            color: #333;
+            text-align: center;
+        }
+
+        .login-card input {
+            width: 100%;
+            margin-bottom: 12px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .login-error {
+            color: #dc3545;
+            font-size: 13px;
+            margin-top: 8px;
+            text-align: center;
+            display: none;
+        }
+
+        .slide-duration-badge {
+            width: 70px;
+            height: 70px;
+            background: #eef1ff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            font-weight: 700;
+            color: #667eea;
+            font-size: 18px;
+        }
+
+        .slide-duration-badge span {
+            font-size: 11px;
+            font-weight: 600;
+            color: #555;
+        }
     </style>
 </head>
 <body>
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-card">
+            <h2>Login</h2>
+            <input type="text" id="loginUser" placeholder="Login" autocomplete="username">
+            <input type="password" id="loginPass" placeholder="Hasło" autocomplete="current-password">
+            <button class="btn-primary" id="loginBtn">Zaloguj</button>
+            <div class="login-error" id="loginError">Błędny login lub hasło</div>
+        </div>
+    </div>
     <div class="container">
-        <h1>🎮 Host Control Panel</h1>
+        <h1>Panel Kontroli</h1>
         
         <div class="controls">
             <div class="control-section">
-                <h2>📊 Slide Controls</h2>
+                <h2>Chorągiew / Etap</h2>
                 <div class="set-controls">
                     <select id="setSelect"></select>
-                    <button class="btn-primary" id="applySetBtn">Apply</button>
+                    <button class="btn-primary" id="applySetBtn">Zmień</button>
                 </div>
                 <div class="slide-controls">
-                    <button class="btn-secondary" id="prevBtn">← Previous</button>
-                    <button class="btn-primary" id="nextBtn">Next →</button>
+                    <button class="btn-secondary" id="prevBtn">← Poprzedni</button>
+                    <button class="btn-primary" id="nextBtn">Następny →</button>
                 </div>
                 <div class="current-slide">
-                    <div class="slide-indicator">Slide <span id="currentSlideNum">1</span> of <span id="totalSlides">0</span></div>
+                    <div class="slide-indicator">Slajd <span id="currentSlideNum">1</span> of <span id="totalSlides">0</span></div>
                     <h3 id="currentTitle">-</h3>
                     <div id="slideDuration" style="font-size: 12px; color: #666; margin-top: 8px;"></div>
                 </div>
             </div>
             
             <div class="control-section">
-                <h2>⏱️ Timer Controls</h2>
+                <h2>Kontrola czasu</h2>
                 <div class="lang-controls">
                     <select id="previewLangSelect"></select>
                 </div>
@@ -271,7 +346,7 @@
         </div>
         
         <div class="preview">
-            <h2>📑 All Slides</h2>
+            <h2>Wszystkie slajdy</h2>
             <div class="slides-list" id="slidesList"></div>
         </div>
     </div>
@@ -285,8 +360,9 @@
         let timerState = null;
         let slideJustChanged = false;  // Track if slide was just changed
         let availableSets = [];
-        let currentSetId = null;
+        let currentSetId = localStorage.getItem('hostSetId') || null;
         let previewLang = localStorage.getItem('hostPreviewLang') || '';
+        let isHostLoggedIn = false;
         
         // Load state from localStorage
         function loadSavedState() {
@@ -311,10 +387,10 @@
             currentSlide = Math.min(savedIndex, slides.length - 1);
             timerState = data.timer;
             currentSetId = data.setId || currentSetId;
+            localStorage.setItem('hostSetId', currentSetId || '');
             
             updateUI();
             renderSlidesList();
-            loadSets();
             renderPreviewLanguages();
         });
         
@@ -340,6 +416,29 @@
             renderSlidesList();
             renderSets();
             renderPreviewLanguages();
+        });
+
+        socket.on('host:loginResult', (data) => {
+            const ok = data?.ok;
+            const overlay = document.getElementById('loginOverlay');
+            const error = document.getElementById('loginError');
+            if (ok) {
+                isHostLoggedIn = true;
+                overlay.style.display = 'none';
+                error.style.display = 'none';
+                loadSets();
+            } else {
+                isHostLoggedIn = false;
+                error.style.display = 'block';
+            }
+        });
+
+        socket.on('host:sessionExpired', () => {
+            isHostLoggedIn = false;
+            alert('Sesja wygasła (60 minut). Zaloguj się ponownie.');
+            localStorage.removeItem('hostUser');
+            localStorage.removeItem('hostPass');
+            document.getElementById('loginOverlay').style.display = 'flex';
         });
 
         function getAvailableLanguages() {
@@ -376,8 +475,12 @@
                 availableSets = data.sets || [];
                 if (!currentSetId && availableSets.length > 0) {
                     currentSetId = availableSets[0].id;
+                    localStorage.setItem('hostSetId', currentSetId);
                 }
                 renderSets();
+                if (currentSetId) {
+                    socket.emit('host:selectSet', currentSetId);
+                }
             } catch (error) {
                 console.error('Failed to load sets', error);
             }
@@ -390,7 +493,7 @@
             availableSets.forEach(setItem => {
                 const option = document.createElement('option');
                 option.value = setItem.id;
-                option.textContent = `Zestaw ${setItem.id}`;
+                option.textContent = setItem.name || `Zestaw ${setItem.id}`;
                 if (setItem.id === currentSetId) {
                     option.selected = true;
                 }
@@ -430,11 +533,25 @@
         document.getElementById('applySetBtn').addEventListener('click', async () => {
             const selected = document.getElementById('setSelect').value;
             if (!selected) return;
-            await fetch('/api/set', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ setId: selected })
-            });
+            currentSetId = selected;
+            localStorage.setItem('hostSetId', currentSetId);
+            socket.emit('host:selectSet', selected);
+        });
+
+        socket.on('connect', () => {
+            const savedUser = localStorage.getItem('hostUser') || '';
+            const savedPass = localStorage.getItem('hostPass') || '';
+            if (savedUser && savedPass) {
+                socket.emit('host:login', { username: savedUser, password: savedPass });
+            }
+        });
+
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            const username = document.getElementById('loginUser').value.trim();
+            const password = document.getElementById('loginPass').value;
+            localStorage.setItem('hostUser', username);
+            localStorage.setItem('hostPass', password);
+            socket.emit('host:login', { username, password });
         });
 
         document.getElementById('previewLangSelect').addEventListener('change', (e) => {
@@ -516,8 +633,14 @@
                 if (index === currentSlide) div.classList.add('active');
                 
                 div.innerHTML = `
-                    <h4>Slide ${index + 1}: ${slide.title[langToUse] || 'Untitled'}</h4>
-                    <p>${slide.content[langToUse]?.substring(0, 100) || ''}...</p>
+                    <div>
+                        <h4>Slide ${index + 1}: ${slide.title[langToUse] || 'Untitled'}</h4>
+                        <p>${slide.content[langToUse]?.substring(0, 100) || ''}...</p>
+                    </div>
+                    <div class="slide-duration-badge">
+                        ${slide.duration || 0}
+                        <span>sec</span>
+                    </div>
                 `;
                 
                 div.addEventListener('click', () => {
