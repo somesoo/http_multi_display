@@ -57,6 +57,22 @@
             gap: 10px;
             margin-bottom: 15px;
         }
+
+        .set-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .set-controls select {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
         
         button {
             padding: 12px 24px;
@@ -116,6 +132,22 @@
             display: flex;
             gap: 10px;
             margin-bottom: 15px;
+        }
+
+        .lang-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .lang-controls select {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
         }
         
         input[type="number"] {
@@ -204,6 +236,10 @@
         <div class="controls">
             <div class="control-section">
                 <h2>📊 Slide Controls</h2>
+                <div class="set-controls">
+                    <select id="setSelect"></select>
+                    <button class="btn-primary" id="applySetBtn">Apply</button>
+                </div>
                 <div class="slide-controls">
                     <button class="btn-secondary" id="prevBtn">← Previous</button>
                     <button class="btn-primary" id="nextBtn">Next →</button>
@@ -217,6 +253,9 @@
             
             <div class="control-section">
                 <h2>⏱️ Timer Controls</h2>
+                <div class="lang-controls">
+                    <select id="previewLangSelect"></select>
+                </div>
                 <div class="timer-display">
                     <div class="timer-time" id="timerDisplay">00:00</div>
                 </div>
@@ -245,6 +284,9 @@
         let currentSlide = 0;
         let timerState = null;
         let slideJustChanged = false;  // Track if slide was just changed
+        let availableSets = [];
+        let currentSetId = null;
+        let previewLang = localStorage.getItem('hostPreviewLang') || '';
         
         // Load state from localStorage
         function loadSavedState() {
@@ -268,9 +310,12 @@
             const savedIndex = loadSavedState();
             currentSlide = Math.min(savedIndex, slides.length - 1);
             timerState = data.timer;
+            currentSetId = data.setId || currentSetId;
             
             updateUI();
             renderSlidesList();
+            loadSets();
+            renderPreviewLanguages();
         });
         
         socket.on('slideChanged', (index) => {
@@ -284,6 +329,74 @@
             timerState = state;
             updateTimerDisplay();
         });
+
+        socket.on('slidesUpdated', (data) => {
+            slides = data.slides;
+            currentSlide = data.currentSlide;
+            timerState = data.timer;
+            currentSetId = data.setId || currentSetId;
+            slideJustChanged = true;
+            updateUI();
+            renderSlidesList();
+            renderSets();
+            renderPreviewLanguages();
+        });
+
+        function getAvailableLanguages() {
+            const langs = new Set();
+            slides.forEach(slide => {
+                Object.keys(slide.title || {}).forEach(lang => langs.add(lang));
+            });
+            return Array.from(langs);
+        }
+
+        function renderPreviewLanguages() {
+            const select = document.getElementById('previewLangSelect');
+            if (!select) return;
+            const langs = getAvailableLanguages();
+            if (langs.length === 0) return;
+            if (!previewLang || !langs.includes(previewLang)) {
+                previewLang = langs[0];
+                localStorage.setItem('hostPreviewLang', previewLang);
+            }
+            select.innerHTML = '';
+            langs.forEach(lang => {
+                const option = document.createElement('option');
+                option.value = lang;
+                option.textContent = lang.toUpperCase();
+                if (lang === previewLang) option.selected = true;
+                select.appendChild(option);
+            });
+        }
+
+        async function loadSets() {
+            try {
+                const response = await fetch('/api/sets');
+                const data = await response.json();
+                availableSets = data.sets || [];
+                if (!currentSetId && availableSets.length > 0) {
+                    currentSetId = availableSets[0].id;
+                }
+                renderSets();
+            } catch (error) {
+                console.error('Failed to load sets', error);
+            }
+        }
+
+        function renderSets() {
+            const select = document.getElementById('setSelect');
+            if (!select) return;
+            select.innerHTML = '';
+            availableSets.forEach(setItem => {
+                const option = document.createElement('option');
+                option.value = setItem.id;
+                option.textContent = `Zestaw ${setItem.id}`;
+                if (setItem.id === currentSetId) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+        }
         
         // Slide controls
         document.getElementById('prevBtn').addEventListener('click', () => {
@@ -312,6 +425,23 @@
                 socket.emit('host:nextSlide');
                 slideJustChanged = true;
             }
+        });
+
+        document.getElementById('applySetBtn').addEventListener('click', async () => {
+            const selected = document.getElementById('setSelect').value;
+            if (!selected) return;
+            await fetch('/api/set', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ setId: selected })
+            });
+        });
+
+        document.getElementById('previewLangSelect').addEventListener('change', (e) => {
+            previewLang = e.target.value;
+            localStorage.setItem('hostPreviewLang', previewLang);
+            updateUI();
+            renderSlidesList();
         });
         
         // Update timer display when input changes
@@ -345,7 +475,8 @@
                 
                 // Show first available language title
                 const firstLang = Object.keys(slide.title)[0];
-                document.getElementById('currentTitle').textContent = slide.title[firstLang] || '-';
+                const langToUse = previewLang && slide.title[previewLang] ? previewLang : firstLang;
+                document.getElementById('currentTitle').textContent = slide.title[langToUse] || '-';
                 
                 // Show duration if available
                 const durationEl = document.getElementById('slideDuration');
@@ -379,13 +510,14 @@
             
             slides.forEach((slide, index) => {
                 const firstLang = Object.keys(slide.title)[0];
+                const langToUse = previewLang && slide.title[previewLang] ? previewLang : firstLang;
                 const div = document.createElement('div');
                 div.className = 'slide-item';
                 if (index === currentSlide) div.classList.add('active');
                 
                 div.innerHTML = `
-                    <h4>Slide ${index + 1}: ${slide.title[firstLang] || 'Untitled'}</h4>
-                    <p>${slide.content[firstLang]?.substring(0, 100) || ''}...</p>
+                    <h4>Slide ${index + 1}: ${slide.title[langToUse] || 'Untitled'}</h4>
+                    <p>${slide.content[langToUse]?.substring(0, 100) || ''}...</p>
                 `;
                 
                 div.addEventListener('click', () => {

@@ -3,6 +3,7 @@ const socket = io();
 // Get selected languages from URL
 const urlParams = new URLSearchParams(window.location.search);
 const selectedLangs = urlParams.get('langs')?.split(',') || ['en'];
+const selectedSet = urlParams.get('set');
 
 let slides = [];
 let currentSlideIndex = 0;
@@ -31,6 +32,14 @@ socket.on('connect', () => {
     document.getElementById('connectionStatus').textContent = 'Connected';
     document.getElementById('connectionStatus').className = 'connection-status connected';
 });
+
+if (selectedSet) {
+    fetch('/api/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setId: selectedSet })
+    });
+}
 
 socket.on('disconnect', () => {
     document.getElementById('connectionStatus').textContent = 'Disconnected';
@@ -75,6 +84,23 @@ socket.on('slideChanged', (index) => {
 socket.on('timerUpdate', (state) => {
     timerState = state;
     updateTimer();
+});
+
+socket.on('slidesUpdated', (data) => {
+    slides = data.slides;
+    currentSlideIndex = data.currentSlide;
+    timerState = data.timer;
+    renderSlide();
+    updateTimer();
+
+    const timerBar = document.querySelector('.timer-bar');
+    if (timerBar) {
+        if (slides[currentSlideIndex] && slides[currentSlideIndex].duration === 0) {
+            timerBar.classList.add('hidden');
+        } else {
+            timerBar.classList.remove('hidden');
+        }
+    }
 });
 
 // Render current slide

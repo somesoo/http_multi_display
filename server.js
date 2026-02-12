@@ -11,26 +11,29 @@ const io = socketIO(server);
 
 const PORT = process.env.PORT || 3000;
 const STATE_FILE = path.join(__dirname, 'state.json');
+const SETS_DIR = path.join(__dirname, 'sets');
+const DEFAULT_SET_ID = '1';
 
 // Serve static files
 app.use(express.static('public'));
+app.use(express.json());
 
 // State
 let slides = [];
 let currentSlideIndex = 0;
+let currentSetId = DEFAULT_SET_ID;
+let availableLanguages = [];
 let timerState = {
   running: false,
   timeLeft: 0, // seconds
   totalTime: 0
 };
 
-// Load translations from CSV
-function loadTranslations() {
+function loadLegacyTranslations() {
   try {
     const csvPath = path.join(__dirname, 'translations.csv');
     if (!fs.existsSync(csvPath)) {
-      console.log('No translations.csv found, using default data');
-      return createDefaultSlides();
+      return null;
     }
     
     const fileContent = fs.readFileSync(csvPath, 'utf-8');
@@ -48,7 +51,7 @@ function loadTranslations() {
           id: slideId,
           title: {},
           content: {},
-          duration: parseInt(row.duration) || 0  // Duration in seconds
+          duration: parseInt(row.duration) || 0
         };
       }
       
@@ -59,11 +62,94 @@ function loadTranslations() {
       }
     });
     
-    return Object.values(slideMap);
+    const slides = Object.values(slideMap).sort((a, b) => Number(a.id) - Number(b.id));
+    return {
+      slides,
+      languages: getAvailableLanguagesFromSlides(slides)
+    };
   } catch (error) {
-    console.error('Error loading translations:', error);
-    return createDefaultSlides();
+    console.error('Error loading legacy translations:', error);
+    return null;
   }
+}
+
+function loadSet(setId) {
+  try {
+    const setDir = path.join(SETS_DIR, setId);
+    const translationsDir = path.join(setDir, 'translations');
+    const timePath = path.join(setDir, 'time.csv');
+    if (!fs.existsSync(translationsDir) || !fs.existsSync(timePath)) {
+      return null;
+    }
+    
+    const slideMap = {};
+    const languages = [];
+    const translationFiles = fs.readdirSync(translationsDir).filter(file => file.endsWith('.csv'));
+    
+    translationFiles.forEach(file => {
+      const lang = path.basename(file, '.csv');
+      languages.push(lang);
+      const fileContent = fs.readFileSync(path.join(translationsDir, file), 'utf-8');
+      const records = parse(fileContent, {
+        columns: true,
+        skip_empty_lines: true
+      });
+      
+      records.forEach(row => {
+        const slideId = row.slideId || row.id || '1';
+        if (!slideMap[slideId]) {
+          slideMap[slideId] = {
+            id: slideId,
+            title: {},
+            content: {},
+            duration: 0
+          };
+        }
+        slideMap[slideId].title[lang] = row.title || '';
+        slideMap[slideId].content[lang] = row.content || '';
+      });
+    });
+    
+    const timeContent = fs.readFileSync(timePath, 'utf-8');
+    const timeRecords = parse(timeContent, {
+      columns: true,
+      skip_empty_lines: true
+    });
+    
+    timeRecords.forEach(row => {
+      const slideId = row.slideId || row.id || '1';
+      if (!slideMap[slideId]) {
+        slideMap[slideId] = {
+          id: slideId,
+          title: {},
+          content: {},
+          duration: 0
+        };
+      }
+      slideMap[slideId].duration = parseInt(row.duration) || 0;
+    });
+    
+    const slides = Object.values(slideMap).sort((a, b) => Number(a.id) - Number(b.id));
+    return { slides, languages };
+  } catch (error) {
+    console.error('Error loading set:', setId, error);
+    return null;
+  }
+}
+
+function listSets() {
+  if (!fs.existsSync(SETS_DIR)) return [];
+  return fs.readdirSync(SETS_DIR, { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => {
+      const data = loadSet(entry.name);
+      if (!data) return null;
+      return {
+        id: entry.name,
+        languages: data.languages
+      };
+    })
+    .filter(Boolean);
 }
 
 function createDefaultSlides() {
@@ -104,13 +190,18 @@ function loadState() {
   try {
     if (fs.existsSync(STATE_FILE)) {
       const data = JSON.parse(fs.readFileSync(STATE_FILE, 'utf-8'));
-      currentSlideIndex = Math.min(data.currentSlide || 0, slides.length - 1);
-      console.log('State loaded: current slide =', currentSlideIndex);
+      return {
+        currentSlideIndex: data.currentSlide || 0,
+        currentSetId: data.currentSetId || DEFAULT_SET_ID
+      };
     }
   } catch (error) {
     console.error('Error loading state:', error);
-    currentSlideIndex = 0;
   }
+  return {
+    currentSlideIndex: 0,
+    currentSetId: DEFAULT_SET_ID
+  };
 }
 
 // Save state to file
@@ -118,6 +209,7 @@ function saveState() {
   try {
     fs.writeFileSync(STATE_FILE, JSON.stringify({
       currentSlide: currentSlideIndex,
+      currentSetId,
       timestamp: new Date().toISOString()
     }), 'utf-8');
   } catch (error) {
@@ -125,18 +217,72 @@ function saveState() {
   }
 }
 
-// Initialize slides
-slides = loadTranslations();
-loadState();
-
-// Get available languages
-function getAvailableLanguages() {
+function getAvailableLanguagesFromSlides(slidesData) {
   const langs = new Set();
-  slides.forEach(slide => {
-    Object.keys(slide.title).forEach(lang => langs.add(lang));
+  slidesData.forEach(slide => {
+    Object.keys(slide.title || {}).forEach(lang => langs.add(lang));
   });
   return Array.from(langs);
 }
+
+// Initialize slides
+const savedState = loadState();
+currentSetId = savedState.currentSetId || DEFAULT_SET_ID;
+const setData = loadSet(currentSetId) || loadLegacyTranslations();
+if (setData) {
+  slides = setData.slides;
+  availableLanguages = setData.languages;
+} else {
+  slides = createDefaultSlides();
+  availableLanguages = getAvailableLanguagesFromSlides(slides);
+}
+currentSlideIndex = Math.min(savedState.currentSlideIndex || 0, slides.length - 1);
+timerState = {
+  running: false,
+  timeLeft: slides[currentSlideIndex]?.duration || 0,
+  totalTime: slides[currentSlideIndex]?.duration || 0
+};
+
+// Get available languages
+function getAvailableLanguages() {
+  return availableLanguages;
+}
+
+// Sets API
+app.get('/api/sets', (req, res) => {
+  res.json({
+    sets: listSets()
+  });
+});
+
+app.post('/api/set', (req, res) => {
+  const { setId } = req.body || {};
+  if (!setId) {
+    return res.status(400).json({ error: 'setId is required' });
+  }
+  const data = loadSet(setId);
+  if (!data) {
+    return res.status(404).json({ error: 'Set not found' });
+  }
+  currentSetId = setId;
+  slides = data.slides;
+  availableLanguages = data.languages;
+  currentSlideIndex = 0;
+  timerState = {
+    running: false,
+    timeLeft: slides[currentSlideIndex]?.duration || 0,
+    totalTime: slides[currentSlideIndex]?.duration || 0
+  };
+  saveState();
+  io.emit('slidesUpdated', {
+    slides,
+    currentSlide: currentSlideIndex,
+    languages: availableLanguages,
+    timer: timerState,
+    setId: currentSetId
+  });
+  return res.json({ ok: true });
+});
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
@@ -147,7 +293,8 @@ io.on('connection', (socket) => {
     slides,
     currentSlide: currentSlideIndex,
     languages: getAvailableLanguages(),
-    timer: timerState
+    timer: timerState,
+    setId: currentSetId
   });
   
   // Host controls
