@@ -91,8 +91,8 @@ body {
 
 .single-lang > .slide-content {
     width: 100%;
-    max-width: 1100px;
-    padding: 36px 40px;
+    max-width: 1400px;
+    padding: 36px 50px;
     background: rgba(15, 18, 36, 0.22);
     border: 1px solid rgba(255, 255, 255, 0.10);
     border-radius: 18px;
@@ -151,6 +151,8 @@ body {
     line-height: 1.18;
     color: #fff;
     word-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
     letter-spacing: 0.3px;
 }
 
@@ -158,6 +160,8 @@ body {
     line-height: 1.55;
     color: rgba(255, 255, 255, 0.85);
     word-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
 }
 
 .slide-duration {

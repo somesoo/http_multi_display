@@ -42,8 +42,6 @@ Strona główna pozwala wybrać jeden z dostępnych zestawów prezentacji.
 Panel sterowania dla osoby prowadzącej prezentację.
 
 **Logowanie:**
-- Domyślne dane: username `niewiem`, hasło `nienam`
-- Dane logowania znajdują się w `host-auth.json` (hasło zahaszowane SHA-256)
 - Sesja wygasa po 60 minutach braku aktywności
 
 **Funkcje:**

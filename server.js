@@ -159,6 +159,7 @@ function getSetState(setId) {
       slides: fallbackSlides,
       languages: getAvailableLanguagesFromSlides(fallbackSlides),
       currentSlideIndex: 0,
+      arrowRightPresses: 0,
       timerState: {
         running: false,
         timeLeft: fallbackSlides[0]?.duration || 0,
@@ -174,6 +175,7 @@ function getSetState(setId) {
     slides: data.slides,
     languages: data.languages,
     currentSlideIndex: 0,
+    arrowRightPresses: 0,
     timerState: {
       running: false,
       timeLeft: data.slides[0]?.duration || 0,
@@ -306,6 +308,7 @@ if (existingSets.length === 0) {
 Object.entries(savedState.sets || {}).forEach(([setId, state]) => {
   const setState = getSetState(setId);
   setState.currentSlideIndex = Math.min(state.currentSlide || 0, setState.slides.length - 1);
+  setState.arrowRightPresses = 0;
   setState.timerState = {
     running: false,
     timeLeft: setState.slides[setState.currentSlideIndex]?.duration || 0,
@@ -404,6 +407,7 @@ io.on('connection', (socket) => {
     if (index >= 0 && index < state.slides.length) {
       if (index !== state.currentSlideIndex) {
         state.currentSlideIndex = index;
+        state.arrowRightPresses = 0;
         saveState();
         const currentSlide = state.slides[state.currentSlideIndex];
         state.timerState = {
@@ -421,17 +425,60 @@ io.on('connection', (socket) => {
     if (!checkHostSession()) return;
     const setId = socket.data.setId || DEFAULT_SET_ID;
     const state = getSetState(setId);
-    if (state.currentSlideIndex < state.slides.length - 1) {
-      state.currentSlideIndex++;
-      saveState();
-      const currentSlide = state.slides[state.currentSlideIndex];
-      state.timerState = {
-        running: false,
-        timeLeft: currentSlide.duration || 0,
-        totalTime: currentSlide.duration || 0
-      };
-      io.to(setId).emit('slideChanged', state.currentSlideIndex);
-      io.to(setId).emit('timerUpdate', state.timerState);
+    
+    // Ensure arrowRightPresses is initialized
+    if (typeof state.arrowRightPresses === 'undefined') {
+      state.arrowRightPresses = 0;
+    }
+    
+    const currentSlide = state.slides[state.currentSlideIndex];
+    const duration = currentSlide?.duration || 0;
+    
+    // First press on current slide
+    if (state.arrowRightPresses === 0) {
+      if (duration > 0) {
+        // Start timer
+        state.arrowRightPresses = 1;
+        state.timerState = {
+          running: true,
+          timeLeft: duration,
+          totalTime: duration,
+          startTime: Date.now()
+        };
+        io.to(setId).emit('timerUpdate', state.timerState);
+      } else {
+        // No timer, go to next slide immediately
+        if (state.currentSlideIndex < state.slides.length - 1) {
+          state.currentSlideIndex++;
+          state.arrowRightPresses = 0;
+          saveState();
+          const nextSlide = state.slides[state.currentSlideIndex];
+          const nextDuration = nextSlide?.duration || 0;
+          state.timerState = {
+            running: false,
+            timeLeft: nextDuration,
+            totalTime: nextDuration
+          };
+          io.to(setId).emit('slideChanged', state.currentSlideIndex);
+          io.to(setId).emit('timerUpdate', state.timerState);
+        }
+      }
+    } else {
+      // Second press (or more) - advance to next slide
+      if (state.currentSlideIndex < state.slides.length - 1) {
+        state.currentSlideIndex++;
+        state.arrowRightPresses = 0;
+        saveState();
+        const nextSlide = state.slides[state.currentSlideIndex];
+        const nextDuration = nextSlide?.duration || 0;
+        state.timerState = {
+          running: false,
+          timeLeft: nextDuration,
+          totalTime: nextDuration
+        };
+        io.to(setId).emit('slideChanged', state.currentSlideIndex);
+        io.to(setId).emit('timerUpdate', state.timerState);
+      }
     }
   });
   
@@ -441,12 +488,14 @@ io.on('connection', (socket) => {
     const state = getSetState(setId);
     if (state.currentSlideIndex > 0) {
       state.currentSlideIndex--;
+      state.arrowRightPresses = 0;
       saveState();
       const currentSlide = state.slides[state.currentSlideIndex];
+      const duration = currentSlide?.duration || 0;
       state.timerState = {
         running: false,
-        timeLeft: currentSlide.duration || 0,
-        totalTime: currentSlide.duration || 0
+        timeLeft: duration,
+        totalTime: duration
       };
       io.to(setId).emit('slideChanged', state.currentSlideIndex);
       io.to(setId).emit('timerUpdate', state.timerState);
