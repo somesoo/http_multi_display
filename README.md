@@ -1,130 +1,202 @@
-# Multi-Language Synchronized Presentation System
+# HTTP Multi Display
 
-Aplikacja webowa do synchronicznego wyświetlania tej samej treści w różnych językach z kontrolą hosta.
+Wielojęzyczny system prezentacji z obsługą wielu niezależnych zestawów slajdów, timera i zdalnego sterowania przez panel hosta.
 
-## 🚀 Funkcje
+## Funkcje
 
-- **Real-time synchronizacja** - WebSocket (Socket.io) zapewnia natychmiastową synchronizację
-- **Multi-language support** - Wyświetlanie 1 lub 2 języków jednocześnie
-- **Timer countdown** - Odliczanie czasu widoczne na żywo dla wszystkich
-- **Host control panel** - Pełna kontrola prezentacji przez hosta
-- **Lekki client** - Minimalna ilość JavaScriptu, brak frameworków
-- **CSV import** - Tłumaczenia ładowane z pliku CSV
+- Wielojęzyczne prezentacje (wsparcie dla dowolnej liczby języków)
+- Wiele niezależnych zestawów prezentacji działających jednocześnie
+- Panel hosta z autoryzacją (SHA-256) i timeoutem sesji (60 minut)
+- Timer z automatycznym przełączaniem slajdów
+- Real-time synchronizacja między hostem a klientami przez Socket.IO
+- Responsywny interfejs z niestandardowymi czcionkami i tłami
+- Wskaźniki czasu trwania dla każdego slajdu
 
-## 📋 Wymagania
+## Wymagania
 
 - Node.js (v14 lub nowszy)
 - NPM
 
-## 🛠️ Instalacja
+## Instalacja
 
 ```bash
-# Zainstaluj zależności
 npm install
 ```
 
-## ▶️ Uruchomienie
+## Uruchomienie
 
 ```bash
-# Start serwera
 npm start
 ```
 
-Serwer uruchomi się na `http://localhost:3000`
+Aplikacja uruchomi się na porcie 3000 (lub PORT z zmiennych środowiskowych).
 
-## 📱 Użycie
+## Użycie
 
-### Dla Hosta
+### Ekran wyboru zestawu (/)
 
-1. Otwórz: `http://localhost:3000/host.html`
-2. Kontroluj slajdy używając przycisków lub strzałek klawiatury
-3. Ustaw timer i kontroluj odliczanie
+Strona główna pozwala wybrać jeden z dostępnych zestawów prezentacji.
 
-### Dla Klientów
+### Panel hosta (/host.html)
 
-1. Otwórz: `http://localhost:3000`
-2. Wybierz język (lub dwa języki)
-3. Oglądaj prezentację - wszystko synchronizuje się automatycznie
+Panel sterowania dla osoby prowadzącej prezentację.
 
-## 📝 Format pliku CSV
+**Logowanie:**
+- Domyślne dane: username `niewiem`, hasło `nienam`
+- Dane logowania znajdują się w `host-auth.json` (hasło zahaszowane SHA-256)
+- Sesja wygasa po 60 minutach braku aktywności
 
-Plik `translations.csv` powinien mieć następujące kolumny:
+**Funkcje:**
+- Wybór zestawu prezentacji
+- Nawigacja między slajdami (poprzedni/następny lub kliknięcie na listę)
+- Podgląd treści slajdu w wybranym języku
+- Uruchamianie timera z automatycznym przełączaniem
+- Zatrzymywanie timera
+- Wskaźniki czasu trwania każdego slajdu
 
-```csv
-slideId,language,title,content
-1,en,Welcome,Welcome to our presentation
-1,pl,Witamy,Witamy na naszej prezentacji
+**Sterowanie:**
+- Kliknij na slajd z listy aby przejść do niego
+- Użyj przycisków "Previous" / "Next" do nawigacji
+- Ustaw czas w sekundach i kliknij "Start Timer" aby uruchomić timer
+- "Stop Timer" zatrzymuje odliczanie
+
+### Ekran klienta (/client.html)
+
+Wyświetla prezentację dla widzów.
+
+**Parametry URL:**
+- `?set=1` - ID zestawu prezentacji (domyślnie: 1)
+- `?langs=pl,en,de` - języki do wyświetlenia, rozdzielone przecinkami
+
+**Przykład:**
+```
+http://localhost:3000/client.html?set=2&langs=pl,en
 ```
 
-- **slideId** - numer slajdu
-- **language** - kod języka (en, pl, de, itp.)
-- **title** - tytuł slajdu
-- **content** - treść slajdu
+**Funkcje:**
+- Automatyczna synchronizacja z hostem
+- Wyświetlanie wielu języków jednocześnie
+- Dynamiczne dopasowanie rozmiaru czcionki
+- Timer z odliczaniem
+- Niestandardowe tło i przezroczystość kart
 
-## 🌍 Dodawanie nowych języków
+## Struktura zestawów
 
-1. Edytuj plik `translations.csv`
-2. Dodaj nowe wiersze z odpowiednim kodem języka
-3. Zrestartuj serwer
-4. Nowy język pojawi się automatycznie w selektorze
+Każdy zestaw znajduje się w katalogu `sets/{id}/`:
 
-## 🎨 Struktura projektu
+```
+sets/
+  1/
+    set.json                 # Metadata (nazwa zestawu)
+    time.csv                 # Czasy trwania slajdów
+    translations/
+      en.csv                 # Tłumaczenia angielskie
+      pl.csv                 # Tłumaczenia polskie
+      de.csv                 # Tłumaczenia niemieckie
+```
+
+**set.json:**
+```json
+{
+  "name": "Nazwa zestawu"
+}
+```
+
+**time.csv:**
+```csv
+id,time
+slide1,30
+slide2,45
+slide3,0
+```
+
+Wartość `0` oznacza slajd bez automatycznego przełączania.
+
+**translations/{lang}.csv:**
+```csv
+id,title,body
+slide1,Tytuł slajdu,Treść slajdu
+slide2,Kolejny tytuł,Kolejna treść
+```
+
+## Konfiguracja
+
+### Autoryzacja hosta
+
+Edytuj `host-auth.json`:
+
+```json
+{
+  "username": "admin",
+  "passwordHash": "sha256_hash_hasla"
+}
+```
+
+Aby wygenerować hash SHA-256:
+```bash
+printf '%s' 'twoje_haslo' | sha256sum | awk '{print $1}'
+```
+
+### Timeout sesji
+
+W `server.js` zmieniaj `SESSION_TIMEOUT` (domyślnie: 60 minut):
+
+```javascript
+const SESSION_TIMEOUT = 60 * 60 * 1000; // czas w milisekundach
+```
+
+### Tło i style
+
+Umieść plik `pbe_bck.jpg` w katalogu `public/` aby użyć niestandardowego tła.
+
+Modyfikuj zmienne CSS w `public/style.css`:
+```css
+--bg-image: url('pbe_bck.jpg');
+--bg-opacity: 0.24;
+```
+
+## Hosting
+
+Aplikacja wymaga hostingu obsługującego Socket.IO (długo działające WebSocket połączenia).
+
+**Rekomendowane platformy:**
+- Railway.app
+- Render.com
+- Fly.io
+- Heroku
+
+**Nie wspierane:**
+- Vercel (serverless, brak WebSocket)
+- Netlify (tylko statyczne strony)
+
+## Struktura projektu
 
 ```
 http_multi_display/
-├── server.js              # Backend (Node.js + Socket.io)
+├── server.js              # Backend (Node.js + Express + Socket.IO)
 ├── package.json           # Zależności projektu
-├── translations.csv       # Tłumaczenia slajdów
+├── host-auth.json         # Dane logowania hosta
+├── state.json             # Stan aplikacji (opcjonalny)
+├── sets/                  # Katalog zestawów prezentacji
+│   ├── 1/
+│   ├── 2/
+│   └── 3/
 └── public/
-    ├── index.html         # Wybór języka (home page)
+    ├── index.html         # Wybór zestawu
     ├── client.html        # Widok klienta
-    └── host.html          # Panel kontrolny hosta
+    ├── host.html          # Panel kontrolny hosta
+    ├── script.js          # Logika klienta
+    ├── style.css          # Style klienta
+    └── pbe_bck.jpg        # Tło (opcjonalne)
 ```
 
-## 🔧 Konfiguracja
+## Technologie
 
-### Port serwera
+- Node.js + Express
+- Socket.IO (real-time komunikacja)
+- csv-parse (parsowanie CSV)
+- Inter font (Google Fonts)
 
-Domyślnie: `3000`. Zmień w `server.js` lub ustaw zmienną środowiskową:
-
-```bash
-PORT=8080 npm start
-```
-
-## 📦 Zależności
-
-- **express** - Web server
-- **socket.io** - WebSocket real-time communication
-- **csv-parse** - Parser plików CSV
-
-## 💡 Skróty klawiszowe (Host)
-
-- `←` Poprzedni slajd
-- `→` Następny slajd
-
-## 🐧 Uruchomienie na Linux
-
-```bash
-# Instalacja Node.js (Ubuntu/Debian)
-sudo apt update
-sudo apt install nodejs npm
-
-# Klonowanie/kopiowanie projektu
-cd /path/to/project
-
-# Instalacja i uruchomienie
-npm install
-npm start
-```
-
-## 🔒 Bezpieczeństwo
-
-W wersji produkcyjnej rozważ:
-- Autoryzację dla panelu hosta
-- HTTPS
-- Rate limiting
-- Walidację danych wejściowych
-
-## 📄 Licencja
+## Licencja
 
 MIT

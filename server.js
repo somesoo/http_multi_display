@@ -318,6 +318,11 @@ function getAvailableLanguages() {
   return [];
 }
 
+// Main route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Sets API
 app.get('/api/sets', (req, res) => {
   res.json({
