@@ -3,7 +3,6 @@ const socket = io();
 // Get selected languages from URL
 const urlParams = new URLSearchParams(window.location.search);
 const selectedLangs = urlParams.get('langs')?.split(',') || ['en'];
-const selectedSet = urlParams.get('set');
 
 let slides = [];
 let currentSlideIndex = 0;
@@ -32,14 +31,6 @@ socket.on('connect', () => {
     document.getElementById('connectionStatus').textContent = 'Connected';
     document.getElementById('connectionStatus').className = 'connection-status connected';
 });
-
-if (selectedSet) {
-    fetch('/api/set', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ setId: selectedSet })
-    });
-}
 
 socket.on('disconnect', () => {
     document.getElementById('connectionStatus').textContent = 'Disconnected';

@@ -348,13 +348,7 @@
         document.getElementById('continueBtn').addEventListener('click', () => {
             if (selectedLanguages.length > 0) {
                 const params = selectedLanguages.join(',');
-                fetch('/api/set', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ setId: selectedSetId })
-                }).then(() => {
-                    window.location.href = `/client.html?langs=${params}&set=${selectedSetId}`;
-                });
+                window.location.href = `/client.html?langs=${params}`;
             }
         });
 
