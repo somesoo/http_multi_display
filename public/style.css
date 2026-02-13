@@ -92,6 +92,7 @@ body {
 .single-lang > .slide-content {
     width: 100%;
     max-width: 1600px;
+    max-height: 80vh;
     padding: 28px 40px;
     background: rgba(15, 18, 36, 0.22);
     border: 1px solid rgba(255, 255, 255, 0.10);
@@ -101,6 +102,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 14px;
+    overflow: hidden;
 }
 
 .dual-lang {
@@ -126,6 +128,7 @@ body {
     align-items: center;
     flex: 1;
     min-height: 0;
+    max-height: 100%;
     overflow: hidden;
     position: relative;
 }

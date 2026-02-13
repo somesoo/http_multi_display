@@ -23,9 +23,9 @@ const languageNames = {
 };
 
 // Text sizing configuration
-const MAX_FONT_SIZE = 150;
-const MIN_FONT_SIZE_TITLE = 130;
-const MIN_FONT_SIZE_CONTENT = 108;
+const MAX_FONT_SIZE = 250;
+const MIN_FONT_SIZE_TITLE = 104;
+const MIN_FONT_SIZE_CONTENT = 82;
 
 // Socket events
 socket.on('connect', () => {
@@ -141,9 +141,9 @@ function adjustFontSizes() {
     
     if (!container || !contentArea) return;
     
-    // Get available space (height of content-area)
-    const availableHeight = contentArea.offsetHeight - 40; // 40px for padding
-    const availableWidth = contentArea.offsetWidth - 40;   // 40px for padding
+    // Get available space with safety margins (75% of height, 90% of width)
+    const availableHeight = contentArea.offsetHeight * 0.75;
+    const availableWidth = contentArea.offsetWidth * 0.9;
     
     // Temporarily remove overflow to measure actual content size
     const originalOverflow = container.style.overflow;
