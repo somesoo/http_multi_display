@@ -23,9 +23,9 @@ const languageNames = {
 };
 
 // Text sizing configuration
-const MAX_FONT_SIZE = 300;
-const MIN_FONT_SIZE_TITLE = 56;
-const MIN_FONT_SIZE_CONTENT = 36;
+const MAX_FONT_SIZE = 150;
+const MIN_FONT_SIZE_TITLE = 130;
+const MIN_FONT_SIZE_CONTENT = 108;
 
 // Socket events
 socket.on('connect', () => {
